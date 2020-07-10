@@ -3,7 +3,7 @@ const http = require('http')
 const morgan = require('morgan')
 const bodyParser = require('body-parser')
 const dishRouter = require('./routes/dishRouter')
-const promotionRouter = require('./routes/promotionRouter')
+const promotionRouter = require('./routes/promoRouter')
 const leaderRouter = require('./routes/leaderRouter')
 
 //Server information
