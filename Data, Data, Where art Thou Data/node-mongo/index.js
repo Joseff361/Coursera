@@ -1,35 +1,39 @@
 const MongoClient = require('mongodb').MongoClient
 const assert = require('assert')
+const dboper = require('./operations')
 
-const url = 'mongodb://localhost:27017/'; //This path was specified when the server was initialized
-const dbname = 'conFusion';
+const dbname = 'conFusion'
+const url = 'mongodb://localhost:27017/'
 
 MongoClient.connect(url, (err, client) => {
-    assert.equal(null, err) // If an error ocurrs, the connection ends an print out something hehe
+    assert.equal(err, null)
     console.log('Connected correctly to server')
 
     const db = client.db(dbname)
-    const collection = db.collection('dishes')
 
-    collection.insertOne({"name": "Uthappizza", "description": "test"}, (err, result) => {
-        assert.equal(null, err)
-        console.log('After Insert \n')
-        
-        console.log(result.ops) //operations performed
 
-        //Transforms the BSON in an array of JSON objects
-        collection.find({}).toArray((err, docs) => {
-            assert.equal(null, err)
+    //Si quisiera realizar una serie de acciones sobre la bd, las tendria que representar asi, por ahora...
+    dboper.insertDocument(db, { name: 'Vadonut', description: 'test'}, 'dishes', (result) => {
+        console.log('Inserted document \n', result.ops)
 
-            console.log('Found \n')
-            console.log(docs)
+        dboper.findDocument(db, "dishes", (docs) => {
+            console.log('Found documents\n', docs)
 
-            db.dropCollection("dishes", (err, result) => {
-                assert.equal(null, err)
+            dboper.updateDocument(db, { name: "Vadonut" },{ description: "Updated Test" }, "dishes", (result) => {
+                console.log("Updated Document:\n", result.result)
 
-                client.close()
+                dboper.findDocument(db, "dishes", (docs) => {
+                    console.log('Found updated documents\n', docs)
+
+                    db.dropCollection("dishes", (result) => {
+                        console.log('Dropped collection\n')
+
+                        client.close()
+                    })
+
+                })
             })
         })
-
     })
+
 })
