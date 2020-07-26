@@ -32,32 +32,50 @@ app.set('view engine', 'pug');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
 
 //Lo colocamos antes de que se pueda acceder a cualquier recurso
-function auth (req, res, next) {
-  console.log(req.headers);
-  var authHeader = req.headers.authorization;
-  if (!authHeader) {
-      var err = new Error('You are not authenticated!')
-      res.setHeader('WWW-Authenticate', 'Basic') //Esta es la sintaxis de authentication
-      err.status = 401 //Unauthorized
-      return next(err) //Se va directamente al errorHandler
-  }
+//Opcionalmente podemos firmar una cookie, la cual se almacena en req.secret
+app.use(cookieParser('JoseffAuth'))
+//La firma encripta el header
+//La firma no puede ser alfanumerica: solo numeros o solo letas
 
-  //authHeader es como 'Basic ASMDBBA213' para luego pasar a 'user:password' 
-  var auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':')
-  var user = auth[0];
-  var pass = auth[1];
-  if (user == 'admin' && pass == 'password') {
-      next() // authorized
-  } else {
-      var err = new Error('You are not authenticated!')
-      res.setHeader('WWW-Authenticate', 'Basic')      
-      err.status = 401
-      return next(err)
+function auth (req, res, next) {
+
+  if (!req.signedCookies.user) { //Si no existe la cookie
+    var authHeader = req.headers.authorization 
+    if (!authHeader) { //Si el usuario no esta autorizado(no se le ha asignado el header 'authorization')
+        var err = new Error('You are not authenticated!');
+        res.setHeader('WWW-Authenticate', 'Basic');              
+        err.status = 401;
+        return next(err);
+    }
+    var auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+    var user = auth[0];
+    var pass = auth[1];
+    if (user == 'admin' && pass == 'password') {
+        res.cookie('user','admin',{signed: true}) //Creacion de la cookie, con firma
+        next(); // authorized
+    } else {
+        var err = new Error('You are not authenticated!');
+        res.setHeader('WWW-Authenticate', 'Basic');              
+        err.status = 401;
+        next(err);
+    }
+  }
+  else { //Si tiene la cookie como header...
+      if (req.signedCookies.user === 'admin') {
+          console.log(req.secret)
+          next();
+      }
+      else {
+          var err = new Error('You are not authenticated!');
+          err.status = 401;
+          next(err);
+      }
   }
 }
+
+
 
 app.use(auth)
 
